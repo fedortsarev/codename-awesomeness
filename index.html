@@ -9,11 +9,18 @@
       ul { list-style-type: none; }
       span.number { color: blue; }
       #content { font-family: "Courier New"; font-size: 16pt; }
+      canvas { border: 1px solid black; float: right }
+      div.clear { clear: both; }
     </style>
   </head>
   <body>
+    <canvas id="mainCanvas" width="500" height="500">
+    </canvas>
+
     <div id="content"></div>
     <button id="evalButton">Evaluate</button>
     <script type="text/jsx" src="ui.jsx"></script>
+
+    <div class="clear"></div>
   </body>
 </html>

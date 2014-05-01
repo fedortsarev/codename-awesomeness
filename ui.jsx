@@ -22,16 +22,99 @@ var compound = function(child) {
 };
 
 var stubTree = compound([
-  literal("+"),
-  number(2),
-  number(3)
+  literal("juxtapose"),
+  compound([
+    literal("rectangle"),
+    number(100),
+    number(10),
+    number(110),
+    number(50)
+  ]),
+  compound([
+    literal("circle"),
+    number(100),
+    number(10),
+    number(10)
+  ])
 ]);
+
 
 var numValue = function(num) {
   return {
     type: "value",
     valType: "number",
     value: num
+  };
+};
+
+var picValue = function(draw) {
+  return {
+    type: "value",
+    valType: "picture",
+    draw: draw
+  };
+};
+
+var circle = function(x, y, r) {
+  return picValue(function(ctx) {
+    ctx.beginPath();
+    ctx.arc(x, y, r, 0, 2 * Math.PI, false);
+    ctx.fill();
+  });
+};
+
+var rectangle = function(x, y, w, h) {
+  return picValue(function(ctx) {
+    ctx.beginPath();
+    ctx.rect(x, y, w, h);
+    ctx.fill();
+  });
+};
+
+var juxtapose = function(childPics) {
+  return picValue(function(ctx) {
+    for (var i = 0; i < childPics.length; ++i) {
+      console.log(i);
+      childPics[i].draw(ctx);
+    }
+  });
+};
+
+var colorize = function(pic, color) {
+  return picValue(function(ctx) {
+    var prevSyle = ctx.fillStyle;
+    ctx.fillStyle = color;
+    pic.draw(ctx);
+    ctx.fillStyle = prevStyle;
+  });
+};
+
+var isPicture = function(value) {
+  return value.valType === "picture";
+};
+
+var wrapPictorialFunc = function(fun, argCount) {
+  return {
+    valType: "function",
+    apply: function(args) {
+      if (argCount && args.length !== argCount) {
+        throw "Wrong number of parameter passed to function";
+      }
+      for (var i = 0; i < args.length; i++) {
+        if (!isPicture(args[i])) {
+          console.log(args[i]);
+          throw "Trying to apply picture-combining function to non-picture";
+        }
+      }
+      // wat, undefined as a first argument in apply
+      // this is JavaScript, whatever
+      if (argCount) {
+        return fun.apply(undefined, args);
+      } else {
+        // workaround for variadic functions like juxtapose
+        return fun(args);
+      }
+    }
   };
 };
 
@@ -62,30 +145,36 @@ var createEnvironment = function(table) {
   };
 };
 
-var wrapNumericFunction = function(fun) {
+var wrapNumericFunction = function(fun, argCount) {
   return {
     valType: "function",
     apply: function(args) {
-      if (args.length !== 2) {
-        throw "More than two arguments to add function!";
+      if (args.length !== argCount) {
+        throw "Wrong number of arguments";
       }
-      var arg1 = args[0];
-      var arg2 = args[1];
-      if (isNumValue(arg1) && isNumValue(arg2)) {
-        return numValue(fun(arg1.value, arg2.value));
+      var realArgs = [];
+      for (var i = 0; i < argCount; i++) {
+        if (!isNumValue(args[i])) {
+          throw "Unable to apply numeric function to non-numeric arguments";
+        }
+        realArgs.push(args[i].value);
       }
-      throw "Unable to apply numeric function to non-numeric arguments";
+      return fun.apply(undefined, realArgs);
     }
   };
 };
 
 var defaultEnvironment = createEnvironment({
   "+": wrapNumericFunction(function(arg1, arg2) {
-    return arg1 + arg2;
-  }),
+    return numValue(arg1 + arg2);
+  }, 2),
   "*": wrapNumericFunction(function(arg1, arg2) {
-    return arg1 * arg2;
-  })
+    return numValue(arg1 * arg2);
+  }, 2),
+  "juxtapose": wrapPictorialFunc(juxtapose),
+  "colorize": wrapPictorialFunc(colorize, 1),
+  "circle": wrapNumericFunction(circle, 3),
+  "rectangle": wrapNumericFunction(rectangle, 4)
 });
 
 var evaluateTree = function(expr, env) {
@@ -222,13 +311,21 @@ document.getElementById('evalButton').addEventListener('click', function(e) {
     result = evaluateTree(stubTree, defaultEnvironment);
   } catch (e) {
     alert(e);
+    return;
   }
   // TODO: need more sensible usage of computed results
   // and error messages too, by the way
+  console.log(result);
   if (result.valType === "number") {
     alert(result.value);
   } else if (result.valType === "literal") {
     alert(result.value);
+  } else if (result.valType === "picture") {
+    var canvas = document.getElementById("mainCanvas");
+    console.log(canvas);
+    var ctx = canvas.getContext("2d");
+    console.log(ctx);
+    result.draw(ctx);
   } else {
     alert(result);
   }
