@@ -67,12 +67,12 @@ var Compound = React.createClass({
     }
     if (this.state.editing) {
       restNodes.push(
-        <input value={this.state.text} onChange={this.handleChange} onKeyUp={this.handleKeyUp}/>
+        <li><input value={this.state.text} onChange={this.handleChange} onKeyUp={this.handleKeyUp}/>{")"}</li>
       );
     } else {
-      restNodes.push(<a href="#" onClick={this.handleClick}>+</a>);
+      restNodes.push(<li><a href="#" onClick={this.handleClick}>+</a>{")"}</li>);
     }
-    return <span>({firstNode}<ul>{restNodes}</ul>)</span>;
+    return <span>({firstNode}<ul>{restNodes}</ul></span>;
   },
   handleClick: function(e) {
     this.setState({editing: true});
