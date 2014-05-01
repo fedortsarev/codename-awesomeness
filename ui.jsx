@@ -27,6 +27,90 @@ var stubTree = compound([
   number(3)
 ]);
 
+var numValue = function(num) {
+  return {
+    type: "value",
+    valType: "number",
+    value: num
+  };
+};
+
+var isNumValue = function(expr) {
+  return expr.valType === "number";
+};
+
+var isLiteral = function(expr) {
+  return expr.type === "literal";
+};
+
+var safeNth = function(arr, i) {
+  if (i < 0) {
+    throw "Index is less than zero";
+  } else if (i > arr.length) {
+    throw "Index is too large";
+  } else {
+    return arr[i];
+  }
+};
+
+var createEnvironment = function(table) {
+  return {
+    content: table,
+    lookup: function(key) {
+      return this.content[key]
+    }
+  };
+};
+
+var wrapNumericFunction = function(fun) {
+  return {
+    valType: "function",
+    apply: function(args) {
+      if (args.length !== 2) {
+        throw "More than two arguments to add function!";
+      }
+      var arg1 = args[0];
+      var arg2 = args[1];
+      if (isNumValue(arg1) && isNumValue(arg2)) {
+        return numValue(fun(arg1.value, arg2.value));
+      }
+      throw "Unable to apply numeric function to non-numeric arguments";
+    }
+  };
+};
+
+var defaultEnvironment = createEnvironment({
+  "+": wrapNumericFunction(function(arg1, arg2) {
+    return arg1 + arg2;
+  }),
+  "*": wrapNumericFunction(function(arg1, arg2) {
+    return arg1 * arg2;
+  })
+});
+
+var evaluateTree = function(expr, env) {
+  switch (expr.type) {
+    case "number":
+      return numValue(expr.value);
+    case "literal":
+      return env.lookup(expr.value);
+    case "compound":
+      if (expr.child.length === 0) {
+        throw "Malformed compound exception";
+      }
+      var firstChild = expr.child[0];
+      var funValue = evaluateTree(firstChild, env);
+      if (funValue.valType !== "function") {
+        throw "Trying to apply non-function to argument";
+      }
+      return funValue.apply(expr.child.slice(1).map(function (elem) {
+        return evaluateTree(elem, env);
+      }));
+    default:
+      throw "Unexpected type of value!";
+  }
+};
+
 var createNodeElement = function(tree, prefix, suffix) {
   switch (tree.type) {
     case "literal":
@@ -131,3 +215,21 @@ React.renderComponent(
   <ExpressionTree data={[stubTree]}/>,
   document.getElementById('content')
 );
+
+document.getElementById('evalButton').addEventListener('click', function(e) {
+  var result;
+  try {
+    result = evaluateTree(stubTree, defaultEnvironment);
+  } catch (e) {
+    alert(e);
+  }
+  // TODO: need more sensible usage of computed results
+  // and error messages too, by the way
+  if (result.valType === "number") {
+    alert(result.value);
+  } else if (result.valType === "literal") {
+    alert(result.value);
+  } else {
+    alert(result);
+  }
+});
