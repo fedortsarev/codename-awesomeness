@@ -43,7 +43,7 @@ var parseInput = function(input) {
     return compound([]);
   } else {
     var num = parseInt(input);
-    if (num === NaN) {
+    if (!isNaN(num)) {
       return number(num);
     } else {
       return literal(input);
@@ -53,7 +53,7 @@ var parseInput = function(input) {
 
 var Compound = React.createClass({
   getInitialState: function() {
-    return {text: "ohai", editing: false};
+    return {text: "", editing: false};
   },
   render: function() {
     var internalNodes = this.props.data.child;
@@ -96,7 +96,7 @@ var Compound = React.createClass({
 
     var children = this.props.data.child;
     children.push(parseInput(e.target.value));
-    this.setState({text: ""});
+    this.setState({text: "", editing: false});
     return false;
   },
   handleChange: function(e) {
@@ -113,7 +113,7 @@ var Literal = React.createClass({
 
 var Number = React.createClass({
   render: function() {
-    return <li>{this.props.data.value}</li>;
+    return <li className="number">{this.props.data.value}</li>;
   }
 });
 
