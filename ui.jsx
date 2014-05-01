@@ -63,16 +63,28 @@ var Compound = React.createClass({
     }
     var restNodes = [];
     for (var i = 1; i < internalNodes.length; ++i) {
-      restNodes.push(<li>{createNodeElement(internalNodes[i])}</li>);
+      restNodes.push(createNodeElement(internalNodes[i]));
     }
     if (this.state.editing) {
       restNodes.push(
-        <li><input value={this.state.text} onChange={this.handleChange} onKeyUp={this.handleKeyUp}/>{")"}</li>
+        <span><input value={this.state.text} onChange={this.handleChange} onKeyUp={this.handleKeyUp}/>{")"}</span>
       );
     } else {
-      restNodes.push(<li><a href="#" onClick={this.handleClick}>+</a>{")"}</li>);
+      restNodes.push(<span><a href="#" onClick={this.handleClick}>+</a>{")"}</span>);
     }
-    return <span>({firstNode}<ul>{restNodes}</ul></span>;
+    if (firstNode === null) {
+      // restNodes.length > 0 always here as for now
+      firstNode = restNodes[0];
+      restNodes = restNodes.slice(1);
+    }
+    var secondNode = "";
+    if (restNodes.length > 0) {
+      var transformedNodes = restNodes.map(function (elem) {
+        return <li>{elem}</li>;
+      });
+      secondNode = <ul>{transformedNodes}</ul>;
+    }
+    return <span>({firstNode}{secondNode}</span>;
   },
   handleClick: function(e) {
     this.setState({editing: true});
