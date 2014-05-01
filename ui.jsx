@@ -57,33 +57,22 @@ var Compound = React.createClass({
   },
   render: function() {
     var internalNodes = this.props.data.child;
-    if (internalNodes.length === 0) {
-      var innerContent = null;
-      if (this.state.editing) {
-        innerContent = <input value={this.state.text} onChange={this.handleChange} onKeyUp={this.handleKeyUp}/>;
-      } else {
-        innerContent = <a href="#" onClick={this.handleClick}>+</a>;
-      }
-      return <li>({innerContent})</li>
-    } else if (internalNodes.length === 1) {
-      var singleNode = createNodeElement(internalNodes[0]);
-      return <li>({singleNode})</li>;
-    } else {
-      var firstNode = createNodeElement(internalNodes[0]);
-      var restNodes = [];
-      for (var i = 1; i < internalNodes.length; ++i) {
-        restNodes.push(createNodeElement(internalNodes[i]));
-      }
-      if (this.state.editing) {
-        restNodes.push(
-          <input value={this.state.text} onChange={this.handleChange} onKeyUp={this.handleKeyUp}/>
-        );
-      } else {
-        restNodes.push(<a href="#" onClick={this.handleClick}>+</a>);
-      }
-      // TODO: think about how show closing bracket on the same line
-      return <li>({firstNode}<ul>{restNodes}</ul>)</li>;
+    var firstNode = null;
+    if (internalNodes.length > 0) {
+      firstNode = createNodeElement(internalNodes[0]);
     }
+    var restNodes = [];
+    for (var i = 1; i < internalNodes.length; ++i) {
+      restNodes.push(<li>{createNodeElement(internalNodes[i])}</li>);
+    }
+    if (this.state.editing) {
+      restNodes.push(
+        <input value={this.state.text} onChange={this.handleChange} onKeyUp={this.handleKeyUp}/>
+      );
+    } else {
+      restNodes.push(<a href="#" onClick={this.handleClick}>+</a>);
+    }
+    return <span>({firstNode}<ul>{restNodes}</ul>)</span>;
   },
   handleClick: function(e) {
     this.setState({editing: true});
@@ -107,13 +96,13 @@ var Compound = React.createClass({
 
 var Literal = React.createClass({
   render: function() {
-    return <li>{this.props.data.value}</li>;
+    return <span>{this.props.data.value}</span>;
   }
 });
 
 var Number = React.createClass({
   render: function() {
-    return <li className="number">{this.props.data.value}</li>;
+    return <span className="number">{this.props.data.value}</span>;
   }
 });
 
