@@ -116,7 +116,7 @@ var colorize = function(args) {
   }
 
   return picValue(function(ctx) {
-    var prevSyle = ctx.fillStyle;
+    var prevStyle = ctx.fillStyle;
     ctx.fillStyle = color.value;
     pic.draw(ctx);
     ctx.fillStyle = prevStyle;
