@@ -1,5 +1,23 @@
 /** @jsx React.DOM */
 
+/* Code contents:
+    Expressions constructors
+    Expressions predicates
+    Data loading
+    Value constructors
+    Value predicates
+    Environment manipulation
+    Standard library
+    Utility functions
+    Expression evaluator
+    Top-level animation evaluator
+    UI helper functions
+    React UI components
+    UI component handlers
+*/
+
+// Expressions constructors
+
 var literal = function(str) {
   return {
     type: "literal",
@@ -27,6 +45,14 @@ var string = function(str) {
     value: str
   };
 };
+
+// Expressions predicates
+
+var isLiteral = function(expr) {
+  return expr.type === "literal";
+};
+
+// Data loading
 
 var stubTree;
 if (localStorage) {
@@ -57,6 +83,8 @@ if (!stubTree) {
     */
   ]);
 }
+
+// Value constructors
 
 var numValue = function(num) {
   return {
@@ -100,6 +128,39 @@ var animateValue = function(timeName, expr, env) {
   };
 };
 
+// Value predicates
+
+var isPicture = function(value) {
+  return value.valType === "picture";
+};
+
+var isString = function(value) {
+  return value.valType === "string";
+};
+
+var isNumValue = function(expr) {
+  return expr.valType === "number";
+};
+
+// Environment manipulation
+
+var createEnvironment = function(table) {
+  return {
+    content: table,
+    lookup: function(key) {
+      return this.content[key]
+    }
+  };
+};
+
+var extendEnvironment = function(env, key, value) {
+  var table = $().extend({}, env.content);
+  table[key] = value;
+  return createEnvironment(table);
+};
+
+// Standard library
+
 var circle = function(x, y, r) {
   return picValue(function(ctx) {
     ctx.beginPath();
@@ -119,7 +180,6 @@ var rectangle = function(x, y, w, h) {
 var juxtapose = function(childPics) {
   return picValue(function(ctx) {
     for (var i = 0; i < childPics.length; ++i) {
-      console.log(i);
       childPics[i].draw(ctx);
     }
   });
@@ -144,14 +204,6 @@ var colorize = function(args) {
   });
 };
 
-var isPicture = function(value) {
-  return value.valType === "picture";
-};
-
-var isString = function(value) {
-  return value.valType === "string";
-};
-
 var wrapPictorialFunc = function(fun, argCount) {
   return {
     valType: "function",
@@ -161,7 +213,6 @@ var wrapPictorialFunc = function(fun, argCount) {
       }
       for (var i = 0; i < args.length; i++) {
         if (!isPicture(args[i])) {
-          console.log(args[i]);
           throw "Trying to apply picture-combining function to non-picture";
         }
       }
@@ -175,39 +226,6 @@ var wrapPictorialFunc = function(fun, argCount) {
       }
     }
   };
-};
-
-var isNumValue = function(expr) {
-  return expr.valType === "number";
-};
-
-var isLiteral = function(expr) {
-  return expr.type === "literal";
-};
-
-var safeNth = function(arr, i) {
-  if (i < 0) {
-    throw "Index is less than zero";
-  } else if (i > arr.length) {
-    throw "Index is too large";
-  } else {
-    return arr[i];
-  }
-};
-
-var createEnvironment = function(table) {
-  return {
-    content: table,
-    lookup: function(key) {
-      return this.content[key]
-    }
-  };
-};
-
-var extendEnvironment = function(env, key, value) {
-  var table = $().extend({}, env.content);
-  table[key] = value;
-  return createEnvironment(table);
 };
 
 var wrapNumericFunction = function(fun, argCount) {
@@ -249,6 +267,20 @@ var defaultEnvironment = createEnvironment({
   "pi": numValue(Math.PI)
 });
 
+// Utility functions
+
+var safeNth = function(arr, i) {
+  if (i < 0) {
+    throw "Index is less than zero";
+  } else if (i > arr.length) {
+    throw "Index is too large";
+  } else {
+    return arr[i];
+  }
+};
+
+// Expression evaluator
+
 var evaluateTree = function(expr, env) {
   switch (expr.type) {
     case "number":
@@ -286,6 +318,42 @@ var evaluateTree = function(expr, env) {
   }
 };
 
+// Top-level animation evaluator
+
+var drawInterval = null;
+
+var setupDrawing = function(canvas, ctx, animation) {
+  time = 0;
+  if (drawInterval) {
+    clearInterval(drawInterval);
+    drawInterval = null;
+  }
+
+  intervalLength = 25;
+  drawInterval = setInterval(function() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    var env = extendEnvironment(animation.env, animation.timeName, numValue(time));
+
+    try {
+      var value = evaluateTree(animation.expr, env);
+    } catch (e) {
+      alert(e);
+      clearInterval(drawInterval);
+      drawInterval = null;
+      return;
+    }
+
+    if (isPicture(value)) {
+      value.draw(ctx);
+    } else if (isNumValue(value)) {
+      ctx.fillText("" + value.value, 10, 10);
+    }
+    time += intervalLength / 1000;
+  }, intervalLength);
+};
+
+// UI helper functions
+
 var createNodeElement = function(tree, prefix, suffix) {
   switch (tree.type) {
     case "literal":
@@ -316,6 +384,8 @@ var parseInput = function(input) {
     }
   }
 };
+
+// React UI components
 
 var Compound = React.createClass({
   getInitialState: function() {
@@ -413,38 +483,7 @@ var render = function() {
 
 render();
 
-var drawInterval = null;
-
-var setupDrawing = function(canvas, ctx, animation) {
-  time = 0;
-  if (drawInterval) {
-    clearInterval(drawInterval);
-    drawInterval = null;
-  }
-
-  intervalLength = 25;
-  drawInterval = setInterval(function() {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    var env = extendEnvironment(animation.env, animation.timeName, numValue(time));
-
-    try {
-      var value = evaluateTree(animation.expr, env);
-    } catch (e) {
-      alert(e);
-      clearInterval(drawInterval);
-      drawInterval = null;
-      return;
-    }
-
-    if (isPicture(value)) {
-      value.draw(ctx);
-    } else if (isNumValue(value)) {
-      console.log(value.value);
-      ctx.fillText("" + value.value, 10, 10);
-    }
-    time += intervalLength / 1000;
-  }, intervalLength);
-};
+// UI component handlers
 
 document.getElementById('evalButton').addEventListener('click', function(e) {
   var result;
