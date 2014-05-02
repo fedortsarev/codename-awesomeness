@@ -301,7 +301,10 @@ var createNodeElement = function(tree, prefix, suffix) {
 
 var parseInput = function(input) {
   if (input.startsWith('(')) {
-    return compound([]);
+    if (input.length == 1) {
+      return compound([]);
+    }
+    return compound([parseInput(input.substring(1))]);
   } else if (input.startsWith('"') && input.endsWith('"') && input.length > 1) {
     return string(input.substring(1, input.length - 1));
   } else {
