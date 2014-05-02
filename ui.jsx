@@ -427,7 +427,15 @@ var setupDrawing = function(canvas, ctx, animation) {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     var env = extendEnvironment(animation.env, animation.timeName, numValue(time));
 
-    var value = evaluateTree(animation.expr, env);
+    try {
+      var value = evaluateTree(animation.expr, env);
+    } catch (e) {
+      alert(e);
+      clearInterval(drawInterval);
+      drawInterval = null;
+      return;
+    }
+
     if (isPicture(value)) {
       value.draw(ctx);
     } else if (isNumValue(value)) {
