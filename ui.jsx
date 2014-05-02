@@ -29,6 +29,9 @@ var string = function(str) {
 };
 
 var stubTree = compound([
+  literal("animate"),
+  literal("time")
+  /*
   literal("juxtapose"),
   compound([
     literal("colorize"),
@@ -45,6 +48,7 @@ var stubTree = compound([
     number(10),
     number(10)
   ])
+  */
 ]);
 
 var numValue = function(num) {
@@ -76,6 +80,16 @@ var funValue = function(fun) {
     type: "value",
     valType: "function",
     apply: fun
+  };
+};
+
+var animateValue = function(timeName, expr, env) {
+  return {
+    type: "value",
+    valType: "animation",
+    timeName: timeName,
+    expr: expr,
+    env: env
   };
 };
 
@@ -183,6 +197,12 @@ var createEnvironment = function(table) {
   };
 };
 
+var extendEnvironment = function(env, key, value) {
+  var table = $().extend({}, env.content);
+  table[key] = value;
+  return createEnvironment(table);
+};
+
 var wrapNumericFunction = function(fun, argCount) {
   return {
     valType: "function",
@@ -212,7 +232,14 @@ var defaultEnvironment = createEnvironment({
   "juxtapose": wrapPictorialFunc(juxtapose),
   "colorize": funValue(colorize),
   "circle": wrapNumericFunction(circle, 3),
-  "rectangle": wrapNumericFunction(rectangle, 4)
+  "rectangle": wrapNumericFunction(rectangle, 4),
+  "sin": wrapNumericFunction(function(x) {
+    return numValue(Math.sin(x))
+  }, 1),
+  "cos": wrapNumericFunction(function(x) {
+    return numValue(Math.cos(x))
+  }, 1),
+  "pi": numValue(Math.PI)
 });
 
 var evaluateTree = function(expr, env) {
@@ -224,10 +251,22 @@ var evaluateTree = function(expr, env) {
     case "string":
       return strValue(expr.value);
     case "compound":
-      if (expr.child.length === 0) {
-        throw "Malformed compound exception";
+      var firstChild = safeNth(expr.child, 0);
+
+      if (isLiteral(firstChild)) {
+        switch (firstChild.value) {
+          case "animate":
+            if (expr.child.length != 3) {
+              throw "Wrong number of sub-expressions in animate";
+            }
+            var secondChild = expr.child[1];
+            if (!isLiteral(secondChild)) {
+              throw "Second argument to 'animate' should be a literal";
+            }
+            return animateValue(secondChild.value, expr.child[2], env);
+        }
       }
-      var firstChild = expr.child[0];
+
       var funValue = evaluateTree(firstChild, env);
       if (funValue.valType !== "function") {
         throw "Trying to apply non-function to argument";
@@ -259,7 +298,7 @@ var parseInput = function(input) {
   } else if (input.startsWith('"') && input.endsWith('"') && input.length > 1) {
     return string(input.substring(1, input.length - 1));
   } else {
-    var num = parseInt(input);
+    var num = parseFloat(input);
     if (!isNaN(num)) {
       return number(num);
     } else {
@@ -355,6 +394,31 @@ React.renderComponent(
   document.getElementById('content')
 );
 
+var drawInterval = null;
+
+var setupDrawing = function(canvas, ctx, animation) {
+  time = 0;
+  if (drawInterval) {
+    clearInterval(drawInterval);
+    drawInterval = null;
+  }
+
+  intervalLength = 25;
+  drawInterval = setInterval(function() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    var env = extendEnvironment(animation.env, animation.timeName, numValue(time));
+
+    var value = evaluateTree(animation.expr, env);
+    if (isPicture(value)) {
+      value.draw(ctx);
+    } else if (isNumValue(value)) {
+      console.log(value.value);
+      ctx.fillText("" + value.value, 10, 10);
+    }
+    time += intervalLength / 1000;
+  }, intervalLength);
+};
+
 document.getElementById('evalButton').addEventListener('click', function(e) {
   var result;
   try {
@@ -366,16 +430,14 @@ document.getElementById('evalButton').addEventListener('click', function(e) {
   // TODO: need more sensible usage of computed results
   // and error messages too, by the way
   console.log(result);
+  var canvas = document.getElementById("mainCanvas");
+  var ctx = canvas.getContext("2d");
   if (result.valType === "number") {
     alert(result.value);
-  } else if (result.valType === "literal") {
-    alert(result.value);
   } else if (result.valType === "picture") {
-    var canvas = document.getElementById("mainCanvas");
-    console.log(canvas);
-    var ctx = canvas.getContext("2d");
-    console.log(ctx);
     result.draw(ctx);
+  } else if (result.valType == "animation") {
+    setupDrawing(canvas, ctx, result);
   } else {
     alert(result);
   }
