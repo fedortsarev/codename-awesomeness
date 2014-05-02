@@ -21,14 +21,23 @@ var compound = function(child) {
   };
 };
 
+var string = function(str) {
+  return {
+    type: "string",
+    value: str
+  };
+};
+
 var stubTree = compound([
   literal("juxtapose"),
   compound([
-    literal("rectangle"),
-    number(100),
-    number(10),
-    number(110),
-    number(50)
+    literal("colorize"),
+    compound([
+      literal("rectangle"),
+      number(100),
+      number(10),
+      number(110)
+    ])
   ]),
   compound([
     literal("circle"),
@@ -37,7 +46,6 @@ var stubTree = compound([
     number(10)
   ])
 ]);
-
 
 var numValue = function(num) {
   return {
@@ -52,6 +60,22 @@ var picValue = function(draw) {
     type: "value",
     valType: "picture",
     draw: draw
+  };
+};
+
+var strValue = function(str) {
+  return {
+    type: "value",
+    valType: "string",
+    value: str
+  };
+};
+
+var funValue = function(fun) {
+  return {
+    type: "value",
+    valType: "function",
+    apply: fun
   };
 };
 
@@ -80,10 +104,20 @@ var juxtapose = function(childPics) {
   });
 };
 
-var colorize = function(pic, color) {
+var colorize = function(args) {
+  if (args.length !== 2) {
+    throw "Wrong number of arguments to 'colorize' function";
+  }
+  var pic = args[0];
+  var color = args[1];
+
+  if (!isPicture(pic) || !isString(color)) {
+    throw "Wrong type of arguments to 'colorize' function";
+  }
+
   return picValue(function(ctx) {
     var prevSyle = ctx.fillStyle;
-    ctx.fillStyle = color;
+    ctx.fillStyle = color.value;
     pic.draw(ctx);
     ctx.fillStyle = prevStyle;
   });
@@ -91,6 +125,10 @@ var colorize = function(pic, color) {
 
 var isPicture = function(value) {
   return value.valType === "picture";
+};
+
+var isString = function(value) {
+  return value.valType === "string";
 };
 
 var wrapPictorialFunc = function(fun, argCount) {
@@ -172,7 +210,7 @@ var defaultEnvironment = createEnvironment({
     return numValue(arg1 * arg2);
   }, 2),
   "juxtapose": wrapPictorialFunc(juxtapose),
-  "colorize": wrapPictorialFunc(colorize, 1),
+  "colorize": funValue(colorize),
   "circle": wrapNumericFunction(circle, 3),
   "rectangle": wrapNumericFunction(rectangle, 4)
 });
@@ -183,6 +221,8 @@ var evaluateTree = function(expr, env) {
       return numValue(expr.value);
     case "literal":
       return env.lookup(expr.value);
+    case "string":
+      return strValue(expr.value);
     case "compound":
       if (expr.child.length === 0) {
         throw "Malformed compound exception";
@@ -208,12 +248,16 @@ var createNodeElement = function(tree, prefix, suffix) {
       return <Number data={tree}/>;
     case "compound":
       return <Compound data={tree}/>;
+    case "string":
+      return <String data={tree}/>;
   }
 };
 
 var parseInput = function(input) {
   if (input.startsWith('(')) {
     return compound([]);
+  } else if (input.startsWith('"') && input.endsWith('"') && input.length > 1) {
+    return string(input.substring(1, input.length - 1));
   } else {
     var num = parseInt(input);
     if (!isNaN(num)) {
@@ -288,6 +332,12 @@ var Literal = React.createClass({
 var Number = React.createClass({
   render: function() {
     return <span className="number">{this.props.data.value}</span>;
+  }
+});
+
+var String = React.createClass({
+  render: function() {
+    return <span className="string">"{this.props.data.value}"</span>;
   }
 });
 
