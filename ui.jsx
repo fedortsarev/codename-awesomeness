@@ -28,28 +28,35 @@ var string = function(str) {
   };
 };
 
-var stubTree = compound([
-  literal("animate"),
-  literal("time")
-  /*
-  literal("juxtapose"),
-  compound([
-    literal("colorize"),
+var stubTree;
+if (localStorage) {
+  stubTree = JSON.parse(localStorage.getItem("program"));
+}
+
+if (!stubTree) {
+  stubTree = compound([
+    literal("animate"),
+    literal("time")
+    /*
+    literal("juxtapose"),
     compound([
-      literal("rectangle"),
+      literal("colorize"),
+      compound([
+        literal("rectangle"),
+        number(100),
+        number(10),
+        number(110)
+      ])
+    ]),
+    compound([
+      literal("circle"),
       number(100),
       number(10),
-      number(110)
+      number(10)
     ])
-  ]),
-  compound([
-    literal("circle"),
-    number(100),
-    number(10),
-    number(10)
-  ])
-  */
-]);
+    */
+  ]);
+}
 
 var numValue = function(num) {
   return {
@@ -323,7 +330,7 @@ var Compound = React.createClass({
     }
     if (this.state.editing) {
       restNodes.push(
-        <span><input value={this.state.text} onChange={this.handleChange} onKeyUp={this.handleKeyUp}/>{")"}</span>
+        <span><input value={this.state.text} ref="textInput" onChange={this.handleChange} onKeyUp={this.handleKeyUp}/>{")"}</span>
       );
     } else {
       restNodes.push(<span><a href="#" onClick={this.handleClick}>+</a>{")"}</span>);
@@ -343,7 +350,9 @@ var Compound = React.createClass({
     return <span>({firstNode}{secondNode}</span>;
   },
   handleClick: function(e) {
-    this.setState({editing: true});
+    this.setState({editing: true}, function() {
+      this.refs.textInput.getDOMNode().focus();
+    });
     return false;
   },
   handleKeyUp: function(e) {
@@ -353,6 +362,9 @@ var Compound = React.createClass({
 
     var children = this.props.data.child;
     children.push(parseInput(e.target.value));
+    if (localStorage) {
+      localStorage.setItem("program", JSON.stringify(stubTree));
+    }
     this.setState({text: "", editing: false});
     return false;
   },
@@ -389,10 +401,14 @@ var ExpressionTree = React.createClass({
   }
 });
 
-React.renderComponent(
-  <ExpressionTree data={[stubTree]}/>,
-  document.getElementById('content')
-);
+var render = function() {
+  React.renderComponent(
+    <ExpressionTree data={[stubTree]}/>,
+    document.getElementById('content')
+  );
+};
+
+render();
 
 var drawInterval = null;
 
@@ -441,4 +457,9 @@ document.getElementById('evalButton').addEventListener('click', function(e) {
   } else {
     alert(result);
   }
+});
+
+document.getElementById('eraseButton').addEventListener('click', function(e) {
+  stubTree = compound([]);
+  render();
 });
